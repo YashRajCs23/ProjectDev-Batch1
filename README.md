@@ -493,7 +493,6 @@ IF driver cancels ride:
     notify all riders
 
 
-
 TEAM NAME : ACTIVE LEARNERS
 1.SNEHA MAURYA (LEADER)
 2.SHIVANSH GUPTA
