@@ -1,501 +1,168 @@
-CARPOOLING SYSTEM
-
-1. Problem Statement (PS)
-The Carpooling System is a smart ride-sharing platform that connects drivers and riders traveling in the same direction. The system enables users to create, search, and join ride pools while ensuring safety, privacy, and efficiency.
-
- Objectives:
- 
-•	Reduce travel cost 
-•	Minimize traffic congestion 
-•	Optimize vehicle usage 
-•	Ensure user safety & privacy 
-________________________________________
-
-2. Workflow
-
- Driver Workflow
-
-1.	Register/Login 
-2.	Create Ride 
-3.	Enter details (pickup, drop, time, seats) 
-4.	Publish ride 
-5.	Receive join requests 
-6.	Accept/Reject riders 
-7.	Start ride 
-8.	Complete ride 
-________________________________________
-
- Rider Workflow
-
-1.	Register/Login 
-2.	Search rides 
-3.	Apply filters (location, time, preferences) 
-4.	View matching rides 
-5.	Select ride 
-6.	Send request 
-7.	Wait for approval 
-8.	Join ride 
-9.	Complete ride 
-________________________________________
-
-Matching Workflow
-
-1.	Fetch available rides 
-2.	Compare routes 
-3.	Calculate match percentage 
-4.	Rank rides 
-5.	Display best matches 
-________________________________________
-
-3. System Architecture
-
-High-Level Architecture
-Frontend (Web/App)
-        ↓
-Backend (API Server)
-        ↓
-Services Layer:
-   - User Service
-   - Ride Service
-   - Matching Service
-   - Notification Service
-        ↓
-Database (MongoDB/MySQL)
-        ↓
-External APIs:
-   - Maps API
-   - SMS/Notification API
-________________________________________
-
-Components
-
-1. Frontend
-•	UI for users 
-•	Forms for ride creation/search 
-2. Backend
-•	Handles API requests 
-•	Business logic 
-3. Database
-•	Stores users, rides, requests 
-4. External Services
-•	Maps for route calculation 
-•	Notifications (SMS/Push) 
-________________________________________
-
- 4. Flowchart
-
-START
-   ↓
-Login / Register
-   ↓
-Is User Driver?
-   ↓
- ┌──────────────------┐
- │ YES           │ NO            │
- ↓               ↓
-Create Ride      Search Ride
- ↓               ↓
-Store in DB      Fetch Rides
- ↓               ↓
-Wait Requests    Match Algorithm
- ↓               ↓
-Accept/Reject    Show Results
- ↓               ↓
-Ride Start ← Request Sent
-   ↓
-Ride Completed
-   ↓
-END
-________________________________________
-
-5. Class Diagram (OOP Design)
-
-User
------------------
-userId
-name
-email
-password
-role
------------------
-login()
-register()
-
-Driver extends User
------------------
-vehicleDetails
------------------
-createRide()
-approveRequest()
-
-Rider extends User
------------------
-preferences
------------------
-searchRide()
-requestRide()
-
-Ride
------------------
-rideId
-pickup
-drop
-time
-seats
-driverId
------------------
-addPassenger()
-removePassenger()
-
-RideRequest
------------------
-requestId
-rideId
-riderId
-status
------------------
-approve()
-reject()
-
-MatchingService
------------------
-calculateMatch()
-findBestRides()
-
-NotificationService
------------------
-sendNotification()
-________________________________________
-
-6. Algorithms Used
-
- 1. Ride Matching Algorithm
-Input:
-•	Rider location & destination 
-•	Available rides 
-Logic:
-•	Calculate distance between routes 
-•	Compare pickup & drop points 
-•	Check time compatibility 
-•	Assign match percentage 
-Output:
-•	Sorted list of best rides 
-________________________________________
-
- 2. Route Matching (Basic Approach)
-
-match % = (common route distance / total route distance) * 100
-________________________________________
-
- 3. Filtering Algorithm
-
-•	Filter rides based on: 
-o	Time 
-o	Location 
-o	Preferences 
-________________________________________
-
- 4. Search Optimization
-
-•	Use indexing in database 
-•	Use caching (Redis) 
-________________________________________
-
-7. Important Concepts
-
- Authentication
-•	JWT-based login system 
-•	Role-based access (Driver/Rider) 
-________________________________________
-
-Caching
-
-•	Store frequently searched rides 
-•	Reduce database load 
-________________________________________
-
-Fault Tolerance
-
-•	Retry failed requests 
-•	Backup database 
-•	Error recovery system 
-________________________________________
-
-Scalability
-
-•	Microservices architecture 
-•	Load balancing 
-________________________________________
-
-Privacy
-
-•	Mask phone numbers 
-•	Limited profile visibility 
-•	SOS emergency feature 
-________________________________________
-
-8. Trade-offs
-
-Aspect	    Option	  Trade-off
-Database	SQL	      Strong consistency, less scalable
-Database	NoSQL	  High scalability, less strict
-Matching	Accurate  Slower
-Matching	Fast	  Less precise
-________________________________________
-
-9. Testing Strategy
-
-•	Unit Testing (functions) 
-•	API Testing (Postman) 
-•	Integration Testing 
-•	Edge cases (no rides, full seats) 
-________________________________________
-
-10. Key Features Summary
-
-•	Ride creation & joining 
-•	Intelligent matching 
-•	Route match percentage 
-•	Privacy protection 
-•	Request approval system 
-________________________________________
-
-11. Future Enhancements
-
-•	Real-time tracking (WebSockets) 
-•	Payment integration 
-•	Chat system 
-•	Rating & review system 
-•	AI-based ride prediction 
-
-12. Conclusion
-
-•	The Carpooling System is a scalable and efficient ride-sharing solution that optimizes transportation by intelligently matching drivers and riders while ensuring safety, privacy, and convenience.
-
-
-13. Pesudo codes
-
-1. MAIN SYSTEM FLOW
-START
-
-INPUT userChoice (Login/Register)
-
-IF Register:
-    CALL registerUser()
-
-ELSE IF Login:
-    CALL loginUser()
-
-IF user.role == DRIVER:
-    CALL driverWorkflow()
-
-ELSE IF user.role == RIDER:
-    CALL riderWorkflow()
-
-END
-________________________________________
-
-2. DRIVER WORKFLOW
-FUNCTION driverWorkflow():
-
-    DISPLAY "1. Create Ride"
-
-    INPUT choice
-
-    IF choice == 1:
-        ride = createRide()
-        saveRideToDB(ride)
-
-        WHILE ride not started:
-            requests = fetchRideRequests(ride.id)
-
-            FOR each request IN requests:
-                DISPLAY request details
-
-                INPUT decision (ACCEPT / REJECT)
-
-                IF ACCEPT:
-                    approveRequest(request)
-                    addPassenger(ride, request.riderId)
-
-                ELSE:
-                    rejectRequest(request)
-
-        START ride
-
-        COMPLETE ride
-
-END FUNCTION
-________________________________________
-
-3. RIDER WORKFLOW
-FUNCTION riderWorkflow():
-
-    DISPLAY "Search Rides"
-
-    INPUT source, destination, time, preferences
-
-    rides = searchRides(source, destination, time)
-
-    filteredRides = applyFilters(rides, preferences)
-
-    matchedRides = matchRides(filteredRides, source, destination)
-
-    DISPLAY matchedRides
-
-    INPUT selectedRide
-
-    request = createRideRequest(selectedRide, riderId)
-
-    sendRequestToDriver(request)
-
-    WAIT for approval
-
-    IF approved:
-        JOIN ride
-        COMPLETE ride
-
-    ELSE:
-        DISPLAY "Request Rejected"
-
-END FUNCTION
-________________________________________
-
-4. MATCHING ALGORITHM
-FUNCTION matchRides(rides, source, destination):
-
-    resultList = EMPTY LIST
-
-    FOR each ride IN rides:
-
-        routeMatch = calculateRouteMatch(ride, source, destination)
-        timeMatch = checkTimeCompatibility(ride.time, requestedTime)
-
-        matchPercentage = (routeMatch * 0.7) + (timeMatch * 0.3)
-
-        ADD (ride, matchPercentage) TO resultList
-
-    SORT resultList BY matchPercentage DESC
-
-    RETURN resultList
-
-END FUNCTION
-________________________________________
-
-5. ROUTE MATCH CALCULATION
-FUNCTION calculateRouteMatch(ride, source, destination):
-
-    commonDistance = getCommonRouteDistance(ride.route, source, destination)
-
-    totalDistance = getTotalRouteDistance(ride.route)
-
-    matchPercentage = (commonDistance / totalDistance) * 100
-
-    RETURN matchPercentage
-
-END FUNCTION
-________________________________________
-
-6. FILTERING ALGORITHM
-FUNCTION applyFilters(rides, preferences):
-
-    filtered = EMPTY LIST
-
-    FOR each ride IN rides:
-
-        IF ride.time matches preferences.time AND
-           ride.location matches preferences.location AND
-           ride.seatsAvailable > 0:
-
-            ADD ride TO filtered
-
-    RETURN filtered
-
-END FUNCTION
-________________________________________
-
-7. RIDE REQUEST HANDLING
-FUNCTION createRideRequest(rideId, riderId):
-
-    request.id = generateId()
-    request.rideId = rideId
-    request.riderId = riderId
-    request.status = "PENDING"
-
-    saveRequestToDB(request)
-
-    RETURN request
-FUNCTION approveRequest(request):
-
-    request.status = "APPROVED"
-    updateDB(request)
-
-END FUNCTION
-FUNCTION rejectRequest(request):
-
-    request.status = "REJECTED"
-    updateDB(request)
-
-END FUNCTION
-________________________________________
-
- 8. AUTHENTICATION (JWT BASIC FLOW)
-FUNCTION loginUser():
-
-    INPUT email, password
-
-    user = findUser(email)
-
-    IF user.password == hash(password):
-        token = generateJWT(user)
-        RETURN token
-    ELSE:
-        DISPLAY "Invalid Credentials"
-
-END FUNCTION
-________________________________________
-
-9. SEARCH OPTIMIZATION (CACHING)
-FUNCTION searchRides(source, destination, time):
-
-    cacheKey = source + destination + time
-
-    IF cache exists(cacheKey):
-        RETURN cacheData
-
-    rides = queryDatabase(source, destination, time)
-
-    storeInCache(cacheKey, rides)
-
-    RETURN rides
-
-END FUNCTION
-________________________________________
-
-10. NOTIFICATION SERVICE
-FUNCTION sendNotification(userId, message):
-
-    user = getUser(userId)
-
-    SEND SMS or PUSH notification
-
-END FUNCTION
-________________________________________
-
-11. EDGE CASE HANDLING
-IF no rides found:
-    DISPLAY "No rides available"
-
-IF ride seats full:
-    BLOCK further requests
-
-IF driver cancels ride:
-    notify all riders
-
-
-TEAM NAME : ACTIVE LEARNERS
-1.SNEHA MAURYA (LEADER)
-2.SHIVANSH GUPTA
-3.YASH RAJ SRIVASTAVA
-4.PRASHANT KUMAR MISHRA
-5.PRIYANSHU YADAV
+# 🚗 RideBook — Full-Stack Uber/Ola Clone
+
+A production-ready ride booking system with Private Rides, Shared Cabs, Driver Dashboard, Admin Panel, Geoapify Maps, Razorpay Payments, Socket.io real-time tracking, and SOS emergency system.
+
+---
+
+## 🗂 Project Structure
+
+```
+ridebook/
+├── backend/
+│   ├── config/          db.js, pricing.js
+│   ├── controllers/     auth, driver, ride, payment, admin (incl. chat/emergency/rating/complaint)
+│   ├── middleware/       auth.middleware.js (JWT + role)
+│   ├── models/          User, Driver, Ride, Payment/OTP/Message/Emergency/Rating/Complaint
+│   ├── routes/          auth, ride, driver, payment, admin, chat, emergency, rating, request
+│   ├── services/        otp, matching, geoapify
+│   ├── sockets/         main.socket.js
+│   ├── seed.js
+│   ├── server.js
+│   └── .env.example
+│
+└── frontend/
+    ├── src/
+    │   ├── pages/
+    │   │   ├── rider/    RiderDashboard (map+booking), RideTrackingPage, MyRidesPage
+    │   │   ├── driver/   DriverDashboard (map+jobs), DriverSetupPage, DriverRidesPage
+    │   │   ├── admin/    AdminDashboard (drivers, users, rides, complaints)
+    │   │   ├── ChatPage, ProfilePage, LoginPage, RegisterPage
+    │   ├── components/
+    │   │   ├── common/   RideLayout, SOSButton
+    │   ├── context/      AuthContext, SocketContext
+    │   └── utils/        api.js (Axios + JWT)
+    ├── index.html        (CSS vars + Google Fonts)
+    └── vite.config.js    (proxy to backend)
+```
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Node.js >= 18
+- MongoDB running locally (or Atlas URI)
+
+### 1. Backend
+
+```bash
+cd ridebook/backend
+npm install
+cp .env.example .env
+# Edit .env with your MongoDB URI, Razorpay keys
+node seed.js          # Load sample data
+npm run dev           # Starts on :5000
+```
+
+### 2. Frontend
+
+```bash
+cd ridebook/frontend
+npm install
+npm run dev           # Starts on :3000
+```
+
+Open: **http://localhost:3000**
+
+---
+
+## 🔐 Test Accounts (after seed.js)
+
+| Role | Email | Password | Notes |
+|------|-------|----------|-------|
+| Admin | admin@ridebook.com | admin123 | Full admin panel |
+| Rider (F) | priya@example.com | rider123 | Female rider |
+| Rider (M) | rahul@example.com | rider123 | Male rider |
+| Driver 1 | arjun@example.com | driver123 | Sedan, Hybrid, Any gender |
+| Driver 2 | sunita@example.com | driver123 | SUV, Shared-only, Female-only |
+
+---
+
+## 🔑 OTP Login
+
+1. Enter email → click "Send OTP"
+2. OTP printed in **backend terminal console**
+3. Enter OTP → JWT issued
+
+---
+
+## 🗺 Maps (Geoapify)
+
+API Key: `42275beb38a64d1486b88a378b90a008`
+
+Used for:
+- **Autocomplete** — address search as you type
+- **Geocoding** — address → lat/lng coordinates  
+- **Routing** — distance, duration, polyline between two points
+- **Map Tiles** — rendered via React-Leaflet
+
+---
+
+## 💰 Pricing (INR)
+
+| Cab | Base | Per Km | Per Min |
+|-----|------|--------|---------|
+| Mini | ₹30 | ₹10 | ₹1.50 |
+| Sedan | ₹50 | ₹14 | ₹2.00 |
+| SUV | ₹80 | ₹18 | ₹2.50 |
+| Premium | ₹120 | ₹25 | ₹3.50 |
+
+Shared rides get 45% discount. Surge multiplier configurable via `.env`.
+
+---
+
+## 💳 Razorpay Setup
+
+1. Create test account at https://dashboard.razorpay.com
+2. Get test Key ID + Secret
+3. Add to `.env`:
+   ```
+   RAZORPAY_KEY_ID=rzp_test_xxxxx
+   RAZORPAY_KEY_SECRET=xxxxx
+   ```
+4. Add Razorpay script to frontend `index.html`:
+   ```html
+   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+   ```
+
+---
+
+## 🔌 Socket.io Events
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `joinRide` | Client→Server | Join ride room |
+| `sendMessage` | Client→Server | Send chat message |
+| `receiveMessage` | Server→Client | New message broadcast |
+| `driverLocation` | Client→Server | Driver GPS update |
+| `driverLocationUpdate` | Server→Client | Broadcast to riders |
+| `rideStatusUpdate` | Server→Client | Status change |
+| `newRideAvailable` | Server→Client | Notify online drivers |
+| `goOnline/goOffline` | Client→Server | Driver toggle |
+
+---
+
+## 🧠 Shared Ride Matching
+
+```
+finalScore = (routeMatch × 0.6) + (timeMatch × 0.2) + (preferenceMatch × 0.2)
+```
+
+- Gender mismatch = 0 score (disqualified)
+- Route match uses Haversine distance on polyline points
+- Results sorted by score descending
+
+---
+
+## 📡 API Reference
+
+| Prefix | Endpoints |
+|--------|-----------|
+| `/api/auth` | register, login, request-otp, verify-otp, me, profile |
+| `/api/rides` | estimate, create, my-rides, driver-rides, shared, accept, status, cancel, join-shared |
+| `/api/drivers` | register, me, toggle-online, location, nearby |
+| `/api/payment` | order, verify, cash, my |
+| `/api/admin` | dashboard, users, drivers, approve, block, complaints |
+| `/api/chat` | /:rideId (history) |
+| `/api/emergency` | alert, my, resolve |
+| `/api/ratings` | submit |
