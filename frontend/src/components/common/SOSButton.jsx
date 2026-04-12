@@ -1,34 +1,46 @@
 // src/components/common/SOSButton.jsx
+// SOS moved UP (bottom: 150) so GPS locate button (bottom: 90) is accessible
 import React, { useState } from "react";
 import api from "../../utils/api";
 
 export default function SOSButton() {
-  const [show, setShow] = useState(false);
+  const [show, setShow]       = useState(false);
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [sent, setSent]       = useState(false);
 
   const trigger = async () => {
     setLoading(true);
     try {
-      const loc = await new Promise((res) => {
+      const loc = await new Promise(res => {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
-            (p) => res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+            p => res({ lat: p.coords.latitude, lng: p.coords.longitude }),
             () => res({ lat: 28.6139, lng: 77.2090 })
           );
         } else res({ lat: 28.6139, lng: 77.2090 });
       });
-      await api.post("/emergency/alert", { location: { ...loc, address: "Current GPS Location" } });
+      await api.post("/emergency/alert", { location: { ...loc, address: "GPS Location" } });
       setSent(true);
-      setTimeout(() => { setSent(false); setShow(false); }, 3000);
-    } catch { alert("SOS failed. Try again."); }
+      setTimeout(() => { setSent(false); setShow(false); }, 3500);
+    } catch { alert("SOS failed. Please call emergency services directly."); }
     setLoading(false);
   };
 
   return (
     <>
+      {/* SOS button — bottom: 150 leaves room for GPS button (bottom: 90) */}
       <button onClick={() => setShow(true)} title="SOS Emergency"
-        style={{ position: "fixed", bottom: 28, right: 28, width: 54, height: 54, borderRadius: "50%", background: "var(--red)", border: "none", color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "var(--font-head)", cursor: "pointer", letterSpacing: 0.5, zIndex: 9999, animation: "sosPulse 2s infinite", boxShadow: "0 0 0 4px rgba(239,68,68,0.25)" }}>
+        style={{
+          position: "fixed", bottom: 150, right: 14,
+          width: 52, height: 52, borderRadius: "50%",
+          background: "var(--red)", border: "none",
+          color: "#fff", fontSize: 11, fontWeight: 800,
+          cursor: "pointer", letterSpacing: 0.5,
+          zIndex: 9998, // below GPS button (1000) but above map
+          animation: "sosPulse 2.5s infinite",
+          boxShadow: "0 0 0 4px rgba(239,68,68,0.2)",
+          fontFamily: "var(--font-head)",
+        }}>
         SOS
       </button>
 
@@ -39,13 +51,13 @@ export default function SOSButton() {
               <>
                 <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>
                 <h3 style={{ color: "var(--green)", marginBottom: 8 }}>Alert Sent!</h3>
-                <p style={{ color: "var(--text2)", fontSize: 14 }}>Your trusted contacts and emergency services have been notified.</p>
+                <p style={{ color: "var(--text2)", fontSize: 14 }}>Emergency contacts have been notified with your location.</p>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 52, marginBottom: 12 }}>🚨</div>
                 <h3 style={{ color: "var(--red)", fontSize: 20, marginBottom: 8 }}>Send SOS Alert?</h3>
-                <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 24 }}>This will share your GPS location with emergency contacts. Only use in genuine emergencies.</p>
+                <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 24 }}>This shares your GPS location with emergency contacts. Use only in genuine emergencies.</p>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setShow(false)}
                     style={{ flex: 1, padding: "12px", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text2)", cursor: "pointer" }}>
@@ -53,7 +65,7 @@ export default function SOSButton() {
                   </button>
                   <button onClick={trigger} disabled={loading}
                     style={{ flex: 1, padding: "12px", background: "var(--red)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 800, cursor: loading ? "not-allowed" : "pointer" }}>
-                    {loading ? "Sending..." : "🚨 SEND SOS"}
+                    {loading ? "Sending..." : "🆘 SEND"}
                   </button>
                 </div>
               </>
@@ -62,7 +74,7 @@ export default function SOSButton() {
         </div>
       )}
 
-      <style>{`@keyframes sosPulse { 0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,0.25),0 4px 20px rgba(239,68,68,0.3)} 50%{box-shadow:0 0 0 10px rgba(239,68,68,0.05),0 4px 30px rgba(239,68,68,0.5)} }`}</style>
+      <style>{`@keyframes sosPulse { 0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,0.2)} 50%{box-shadow:0 0 0 10px rgba(239,68,68,0.05)} }`}</style>
     </>
   );
 }

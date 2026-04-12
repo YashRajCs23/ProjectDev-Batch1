@@ -1,4 +1,4 @@
-// sockets/main.socket.js — All real-time events
+// sockets/main.socket.js — Fixed: reliable driver notifications
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";
@@ -14,39 +14,85 @@ const authSocket = async (socket) => {
 };
 
 const initSocketHandlers = (io) => {
+  // Track online drivers: driverSocketId → driverId
+  const onlineDriverSockets = new Map();
+
   io.on("connection", async (socket) => {
     const user = await authSocket(socket);
     if (!user) { socket.disconnect(); return; }
 
-    console.log(`🔌 Socket: ${user.name} (${user.role})`);
+    console.log(`🔌 ${user.name} (${user.role}) connected [${socket.id}]`);
     socket.userId = String(user._id);
     socket.userRole = user.role;
 
-    // ── Join ride room ──────────────────────────────────
+    // ── Auto-rejoin online room if driver was online ──────
+    if (user.role === "DRIVER") {
+      const driver = await Driver.findOne({ userId: user._id });
+      if (driver?.isOnline && driver?.isApproved) {
+        socket.join("drivers_online");
+        onlineDriverSockets.set(socket.id, String(driver._id));
+        console.log(`  ↳ Auto-rejoined drivers_online room`);
+      }
+    }
+
+    // ── Join a ride room ──────────────────────────────────
     socket.on("joinRide", ({ rideId }) => {
       socket.join(`ride_${rideId}`);
-      console.log(`${user.name} joined ride room: ${rideId}`);
+      console.log(`  ${user.name} → ride room: ${rideId}`);
     });
 
-    socket.on("leaveRide", ({ rideId }) => {
-      socket.leave(`ride_${rideId}`);
+    socket.on("leaveRide", ({ rideId }) => socket.leave(`ride_${rideId}`));
+
+    // ── Driver goes online ────────────────────────────────
+    socket.on("goOnline", async () => {
+      if (user.role !== "DRIVER") return;
+      socket.join("drivers_online");
+      const driver = await Driver.findOne({ userId: user._id });
+      if (driver) onlineDriverSockets.set(socket.id, String(driver._id));
+      console.log(`  🟢 ${user.name} is now ONLINE`);
+      io.emit("driverStatusChanged", { driverId: driver?._id, isOnline: true });
     });
 
-    // ── Driver location broadcast ───────────────────────
+    socket.on("goOffline", async () => {
+      if (user.role !== "DRIVER") return;
+      socket.leave("drivers_online");
+      onlineDriverSockets.delete(socket.id);
+      console.log(`  🔴 ${user.name} is now OFFLINE`);
+      const driver = await Driver.findOne({ userId: user._id });
+      io.emit("driverStatusChanged", { driverId: driver?._id, isOnline: false });
+    });
+
+    // ── Rider searching → broadcast to drivers_online ─────
+    // This is a SECONDARY path (backend createRide already does io.emit)
+    // Kept for real-time push without waiting for HTTP response
+    socket.on("riderSearching", (data) => {
+      console.log(`  🚗 Rider searching: ${data.cabType} ride, ₹${data.fare}`);
+      // Emit to all online drivers
+      io.to("drivers_online").emit("newRideAvailable", {
+        ...data,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    // ── Driver GPS location update ────────────────────────
     socket.on("driverLocation", async ({ rideId, lat, lng }) => {
       if (user.role !== "DRIVER") return;
-      // Update DB
-      await Driver.findOneAndUpdate(
+      // Update DB asynchronously
+      Driver.findOneAndUpdate(
         { userId: user._id },
         { currentLocation: { lat, lng, updatedAt: new Date() } }
-      );
-      // Broadcast to ride room
-      io.to(`ride_${rideId}`).emit("driverLocationUpdate", { lat, lng, timestamp: new Date() });
+      ).catch(() => {});
+      // Broadcast to everyone in ride room
+      if (rideId) {
+        socket.to(`ride_${rideId}`).emit("driverLocationUpdate", {
+          lat, lng, timestamp: new Date().toISOString(),
+        });
+      }
     });
 
-    // ── Chat ────────────────────────────────────────────
+    // ── Chat messages ─────────────────────────────────────
     socket.on("sendMessage", async ({ rideId, message }) => {
-      if (!message?.trim()) return;
+      if (!message?.trim() || !rideId) return;
       try {
         const msg = await Message.create({
           rideId,
@@ -54,15 +100,14 @@ const initSocketHandlers = (io) => {
           senderRole: user.role === "DRIVER" ? "DRIVER" : "RIDER",
           message: message.trim(),
         });
-
-        const displayName = user.nameVisibility === "FULL" ? user.name
-          : user.nameVisibility === "FIRST_NAME" ? user.name.split(" ")[0]
-          : user.name.split(" ").map((n) => n[0] + ".").join(" ");
+        // Display name based on privacy setting
+        let name = user.name;
+        if (user.nameVisibility === "FIRST_NAME") name = name.split(" ")[0];
+        if (user.nameVisibility === "INITIALS") name = name.split(" ").map(n => n[0] + ".").join(" ");
 
         io.to(`ride_${rideId}`).emit("receiveMessage", {
-          _id: msg._id,
-          rideId,
-          senderId: { _id: user._id, name: displayName },
+          _id: msg._id, rideId,
+          senderId: { _id: user._id, name },
           senderRole: msg.senderRole,
           message: msg.message,
           createdAt: msg.createdAt,
@@ -72,34 +117,14 @@ const initSocketHandlers = (io) => {
       }
     });
 
-    // ── Driver available for new rides ──────────────────
-    socket.on("goOnline", async () => {
-      if (user.role !== "DRIVER") return;
-      const driver = await Driver.findOneAndUpdate(
-        { userId: user._id },
-        { isOnline: true },
-        { new: true }
-      );
-      socket.join("drivers_online");
-      io.emit("driverOnline", { driverId: driver._id });
-    });
-
-    socket.on("goOffline", async () => {
-      if (user.role !== "DRIVER") return;
-      await Driver.findOneAndUpdate({ userId: user._id }, { isOnline: false });
-      socket.leave("drivers_online");
-    });
-
-    // ── Rider searching — notify all online drivers ────
-    socket.on("riderSearching", (data) => {
-      socket.to("drivers_online").emit("newRideAvailable", data);
-    });
-
+    // ── Disconnect ────────────────────────────────────────
     socket.on("disconnect", async () => {
+      onlineDriverSockets.delete(socket.id);
       if (user.role === "DRIVER") {
-        await Driver.findOneAndUpdate({ userId: user._id }, { isOnline: false });
+        // Don't set isOnline=false on disconnect — driver may reconnect briefly
+        // The toggleOnline API handles the persistent state
       }
-      console.log(`🔌 Disconnected: ${user.name}`);
+      console.log(`🔌 ${user.name} disconnected [${socket.id}]`);
     });
   });
 };

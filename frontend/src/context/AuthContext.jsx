@@ -9,29 +9,48 @@ export const AuthProvider = ({ children }) => {
     try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
   });
   const [driverProfile, setDriverProfile] = useState(null);
+  // Critical: don't show driver dashboard until profile is loaded
+  const [driverLoading, setDriverLoading] = useState(false);
+  const [driverLoaded, setDriverLoaded]   = useState(false);
 
   useEffect(() => {
-    if (user) loadDriver();
-  }, [user?.role]);
+    if (user?.role === "DRIVER") {
+      setDriverLoaded(false);
+      loadDriver();
+    } else {
+      setDriverLoaded(true);
+    }
+  }, [user?._id, user?.role]);
 
   const loadDriver = async () => {
-    if (user?.role !== "DRIVER") return;
+    setDriverLoading(true);
     try {
       const { data } = await api.get("/drivers/me");
       if (data.success) setDriverProfile(data.driver);
-    } catch {}
+      else setDriverProfile(null);
+    } catch {
+      setDriverProfile(null);
+    } finally {
+      setDriverLoading(false);
+      setDriverLoaded(true);
+    }
   };
 
   const saveAuth = (token, u) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(u));
     setUser(u);
+    setDriverProfile(null);
+    setDriverLoaded(false);
   };
 
   const logout = () => {
     localStorage.clear();
     setUser(null);
     setDriverProfile(null);
+    setDriverLoaded(true);
+    // Disconnect socket singleton
+    import("./SocketContext").then(m => m.disconnectSocket?.()).catch(() => {});
   };
 
   const refreshUser = async () => {
@@ -46,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <Ctx.Provider value={{ user, driverProfile, setDriverProfile, saveAuth, logout, refreshUser, loadDriver }}>
+    <Ctx.Provider value={{ user, driverProfile, driverLoading, driverLoaded, setDriverProfile, saveAuth, logout, refreshUser, loadDriver }}>
       {children}
     </Ctx.Provider>
   );
