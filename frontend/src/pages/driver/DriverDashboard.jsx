@@ -42,6 +42,8 @@ export default function DriverDashboard() {
   const [toggling, setToggling]       = useState(false);
   const [toast, setToast]             = useState(null);
   const [lastPoll, setLastPoll]       = useState(null);
+  const [otpData, setOtpData]           = useState(null); // { otp }
+  const [otpInput, setOtpInput]         = useState('');
 
   const flyRef    = useRef(null);
   const watchId   = useRef(null);
@@ -202,6 +204,26 @@ export default function DriverDashboard() {
     } catch (e) { alert(e.response?.data?.message); }
   };
 
+  const generateOtp = async () => {
+    if (!currentRide) return;
+    try {
+      const { data } = await api.post(`/rides/${currentRide._id}/generate-otp`);
+      setOtpData({ otp: data.otp });
+      showToast("🔐 OTP: " + data.otp + " — ask rider to share it with you");
+    } catch (e) { alert(e.response?.data?.message || "Failed"); }
+  };
+
+  const verifyOtp = async () => {
+    if (!currentRide || !otpInput) return;
+    try {
+      await api.post(`/rides/${currentRide._id}/verify-otp`, { otp: otpInput });
+      setCurrentRide(r => ({ ...r, status: "ONGOING" }));
+      setOtpData(null); setOtpInput("");
+      showToast("✅ OTP verified! Ride started.");
+    } catch (e) { alert(e.response?.data?.message || "Wrong OTP. Try again."); }
+  };
+
+
   if (!driverLoaded || driverLoading) {
     return (
       <RideLayout>
@@ -272,11 +294,32 @@ export default function DriverDashboard() {
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {currentRide.status === "ACCEPTED" && <Chip c="var(--blue)"  fn={() => updateStatus("ARRIVING")}>🚗 Arriving</Chip>}
-                  {currentRide.status === "ARRIVING"  && <Chip c="var(--green)" fn={() => updateStatus("ONGOING")}>▶️ Start</Chip>}
+                  {currentRide.status === "ARRIVING"  && <Chip c="var(--green)" fn={generateOtp}>🔐 Get OTP</Chip>}
                   {currentRide.status === "ONGOING"   && <Chip c="var(--green)" fn={() => updateStatus("COMPLETED")}>🏁 Complete</Chip>}
                   <Chip c="var(--accent)" fn={() => nav(`/chat/${currentRide._id}`)}>💬 Chat</Chip>
                   <Chip c="var(--red)"    fn={() => updateStatus("CANCELLED")}>✕</Chip>
                 </div>
+                {/* OTP Verification Panel — shown after driver clicks Get OTP */}
+                {currentRide.status === "ARRIVING" && otpData && (
+                  <div style={{ marginTop: 12, padding: "14px", background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.3)", borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>
+                      📱 Ask rider for their <strong style={{ color: "var(--accent)" }}>4-digit OTP</strong>:
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        value={otpInput}
+                        onChange={e => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="• • • •"
+                        maxLength={4}
+                        style={{ flex: 1, padding: "10px", borderRadius: 8, fontSize: 22, textAlign: "center", letterSpacing: 10, fontWeight: 800 }}
+                      />
+                      <button onClick={verifyOtp} disabled={otpInput.length !== 4}
+                        style={{ padding: "10px 18px", background: otpInput.length === 4 ? "var(--green)" : "var(--border)", border: "none", borderRadius: 8, color: "#fff", fontWeight: 800, fontSize: 16, cursor: otpInput.length === 4 ? "pointer" : "not-allowed" }}>
+                        ✓
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

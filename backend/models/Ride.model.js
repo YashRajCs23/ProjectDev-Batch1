@@ -67,6 +67,8 @@ const RideSchema = new mongoose.Schema(
     cancelledBy: { type: String, enum: ["RIDER", "DRIVER", "ADMIN"], default: null },
     cancelReason: { type: String, default: "" },
     cancellationFee: { type: Number, default: 0 },
+    startOtp: { type: String, default: null },
+    startOtpVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
