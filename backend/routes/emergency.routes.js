@@ -1,4 +1,3 @@
-// routes/emergency.routes.js
 import express from "express";
 import { triggerSOS, getMyAlerts, resolveAlert } from "../controllers/admin.controller.js";
 import { protect } from "../middleware/auth.middleware.js";

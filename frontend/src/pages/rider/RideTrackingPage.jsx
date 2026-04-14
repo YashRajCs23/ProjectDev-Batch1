@@ -148,38 +148,66 @@ export default function RideTrackingPage() {
     } catch {}
   };
 
-  const handlePayNow = async () => {
-    if (ride?.paymentMethod === "CASH") {
-      setPaying(true);
-      try {
-        await api.post("/payment/cash", { rideId: id });
-        setRide(r => ({ ...r, isPaid: true }));
-        alert("✅ Cash payment recorded!");
-      } catch (e) { alert(e.response?.data?.message); }
-      setPaying(false);
+  const handleCashPay = async () => {
+    setPaying(true);
+    try {
+      await api.post("/payment/cash", { rideId: id });
+      setRide(r => ({ ...r, isPaid: true }));
       setShowPayment(false);
-      return;
-    }
-    // Razorpay
+    } catch (e) { alert(e.response?.data?.message || "Failed to record payment."); }
+    setPaying(false);
+  };
+
+  const handleRazorpay = async () => {
     setPaying(true);
     try {
       const { data } = await api.post("/payment/order", { rideId: id });
+
+      // Backend says Razorpay not configured
+      if (data.razorpayNotConfigured) {
+        alert("⚠️ Online payment not configured.\n\nTo enable Razorpay:\n1. Get test keys from dashboard.razorpay.com\n2. Add to backend .env:\n   RAZORPAY_KEY_ID=rzp_test_xxxx\n   RAZORPAY_KEY_SECRET=xxxx\n\nUsing Cash payment instead.");
+        setPaying(false);
+        return;
+      }
+
+      if (!window.Razorpay) {
+        alert("Razorpay script not loaded. Add this to frontend/index.html:\n<script src=\"https://checkout.razorpay.com/v1/checkout.js\"></script>");
+        setPaying(false);
+        return;
+      }
+
       const opts = {
-        key: data.keyId, amount: data.amount, currency: "INR",
-        name: "RideBook", description: `Ride: ${ride?.pickup?.address?.substring(0,20)} → ${ride?.drop?.address?.substring(0,20)}`,
+        key: data.keyId,
+        amount: data.amount,
+        currency: "INR",
+        name: "RideBook",
+        description: `₹${ride?.fareEstimate} · ${ride?.cabType} ride`,
         order_id: data.orderId,
         handler: async (resp) => {
-          await api.post("/payment/verify", { ...resp, rideId: id });
-          setRide(r => ({ ...r, isPaid: true }));
-          setShowPayment(false);
-          alert("✅ Payment successful!");
+          try {
+            await api.post("/payment/verify", { ...resp, rideId: id });
+            setRide(r => ({ ...r, isPaid: true }));
+            setShowPayment(false);
+          } catch { alert("Payment done but verification failed. Contact support."); }
         },
-        prefill: { name: user?.name, email: user?.email },
+        prefill: { name: user?.name, email: user?.email || "" },
         theme: { color: "#f5c518" },
+        modal: { ondismiss: () => setPaying(false) },
       };
-      if (window.Razorpay) { const rzp = new window.Razorpay(opts); rzp.open(); }
-      else alert("Razorpay not loaded. Use Cash option.");
-    } catch (e) { alert(e.response?.data?.message || "Payment failed"); }
+      const rzp = new window.Razorpay(opts);
+      rzp.on("payment.failed", (resp) => {
+        alert("Payment failed: " + resp.error.description);
+        setPaying(false);
+      });
+      rzp.open();
+    } catch (e) {
+      const msg = e.response?.data?.message || "Payment failed";
+      if (e.response?.data?.razorpayNotConfigured) {
+        alert("⚠️ Razorpay not configured in backend .env\n\nPlease use Cash payment or configure Razorpay test keys.");
+      } else {
+        alert(msg);
+      }
+    }
     setPaying(false);
   };
 
@@ -446,15 +474,31 @@ export default function RideTrackingPage() {
 
         {/* ── Pay Modal ── */}
         {showPayment && (
-          <Modal onClose={() => setShowPayment(false)}>
+          <Modal onClose={() => !paying && setShowPayment(false)}>
             <h3 style={{ marginBottom: 4 }}>Pay for Ride</h3>
-            <p style={{ color: "var(--text3)", fontSize: 13, marginBottom: 20 }}>Amount due: <strong style={{ color: "var(--accent)", fontSize: 20 }}>₹{ride?.fareEstimate}</strong></p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={handlePayNow} disabled={paying}
-                style={{ flex: 1, padding: "13px", background: "var(--accent)", border: "none", borderRadius: 10, color: "#000", fontWeight: 800, fontSize: 15, cursor: paying ? "not-allowed" : "pointer" }}>
-                {paying ? "Processing..." : ride?.paymentMethod === "CASH" ? "💵 Confirm Cash" : "💳 Pay Online"}
-              </button>
-            </div>
+            <p style={{ color: "var(--text3)", fontSize: 13, marginBottom: 6 }}>
+              Amount due: <strong style={{ color: "var(--accent)", fontSize: 22 }}>₹{ride?.fareEstimate}</strong>
+            </p>
+            <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 20 }}>
+              {ride?.paymentMethod === "CASH" ? "Selected method: Cash" : "Selected method: Online (Razorpay)"}
+            </p>
+
+            {/* Cash payment */}
+            <button onClick={handleCashPay} disabled={paying}
+              style={{ width: "100%", padding: "13px", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text)", fontWeight: 700, fontSize: 14, cursor: paying ? "not-allowed" : "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              💵 Pay Cash (₹{ride?.fareEstimate})
+              <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 400 }}>· Pay directly to driver</span>
+            </button>
+
+            {/* Razorpay */}
+            <button onClick={handleRazorpay} disabled={paying}
+              style={{ width: "100%", padding: "13px", background: paying ? "rgba(245,197,24,0.4)" : "var(--accent)", border: "none", borderRadius: 10, color: "#000", fontWeight: 800, fontSize: 14, cursor: paying ? "not-allowed" : "pointer", marginBottom: 10 }}>
+              {paying ? "⏳ Processing..." : "💳 Pay Online — ₹" + ride?.fareEstimate}
+            </button>
+
+            <p style={{ fontSize: 11, color: "var(--text3)", textAlign: "center" }}>
+              Online payment requires Razorpay test keys in backend .env
+            </p>
           </Modal>
         )}
       </div>

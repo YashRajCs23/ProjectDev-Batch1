@@ -1,4 +1,3 @@
-// routes/ride.routes.js
 import express from "express";
 import {
   estimateFare, createRide, acceptRide, updateRideStatus, cancelRide,

@@ -1,4 +1,3 @@
-// routes/admin.routes.js
 import express from "express";
 import { protect, requireRole } from "../middleware/auth.middleware.js";
 import {

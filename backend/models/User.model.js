@@ -1,4 +1,3 @@
-// models/User.model.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -12,22 +11,22 @@ const UserSchema = new mongoose.Schema(
     role: { type: String, enum: ["RIDER", "DRIVER", "ADMIN"], default: "RIDER" },
     profilePicture: { type: String, default: "" },
 
-    // ── Privacy ──────────────────────────────────────────
+    //Privacy
     nameVisibility: { type: String, enum: ["FULL", "FIRST_NAME", "INITIALS"], default: "FULL" },
     isProfileBlurred: { type: Boolean, default: true },
 
-    // ── Rating ───────────────────────────────────────────
+    //Rating
     rating: { type: Number, default: 5.0, min: 1, max: 5 },
     totalRatings: { type: Number, default: 0 },
 
-    // ── Safety ───────────────────────────────────────────
+    //Safety
     trustedContacts: [{ name: String, phone: String, email: String }],
 
-    // ── Status ───────────────────────────────────────────
+    //Status
     isBlocked: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
 
-    // ── Complaints ───────────────────────────────────────
+    //Complaints
     complaintsAgainst: [{ type: mongoose.Schema.Types.ObjectId, ref: "Complaint" }],
   },
   { timestamps: true }

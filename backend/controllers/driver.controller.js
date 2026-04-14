@@ -1,4 +1,3 @@
-// controllers/driver.controller.js
 import Driver from "../models/Driver.model.js";
 import User from "../models/User.model.js";
 

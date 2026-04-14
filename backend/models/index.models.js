@@ -1,4 +1,3 @@
-// models/Payment.model.js
 import mongoose from "mongoose";
 
 const PaymentSchema = new mongoose.Schema(
@@ -17,7 +16,6 @@ const PaymentSchema = new mongoose.Schema(
 
 export const Payment = mongoose.model("Payment", PaymentSchema);
 
-// ─────────────────────────────────────────────────────────────
 // OTP
 const OTPSchema = new mongoose.Schema({
   email:     { type: String, required: true, lowercase: true },
@@ -27,7 +25,6 @@ const OTPSchema = new mongoose.Schema({
 });
 export const OTP = mongoose.model("OTP", OTPSchema);
 
-// ─────────────────────────────────────────────────────────────
 // Message
 const MessageSchema = new mongoose.Schema(
   {
@@ -41,7 +38,6 @@ const MessageSchema = new mongoose.Schema(
 );
 export const Message = mongoose.model("Message", MessageSchema);
 
-// ─────────────────────────────────────────────────────────────
 // Emergency
 const EmergencySchema = new mongoose.Schema(
   {
@@ -55,7 +51,6 @@ const EmergencySchema = new mongoose.Schema(
 );
 export const Emergency = mongoose.model("Emergency", EmergencySchema);
 
-// ─────────────────────────────────────────────────────────────
 // Rating
 const RatingSchema = new mongoose.Schema(
   {
@@ -71,7 +66,6 @@ const RatingSchema = new mongoose.Schema(
 );
 export const Rating = mongoose.model("Rating", RatingSchema);
 
-// ─────────────────────────────────────────────────────────────
 // Complaint
 const ComplaintSchema = new mongoose.Schema(
   {

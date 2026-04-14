@@ -1,4 +1,3 @@
-// config/pricing.js — Fare rates in INR per km per cab type
 export const PRICING = {
   MINI:    { base: 30, perKm: 10, perMin: 1.5, name: "Mini",    capacity: 4 },
   SEDAN:   { base: 50, perKm: 14, perMin: 2.0, name: "Sedan",   capacity: 4 },

@@ -1,4 +1,3 @@
-// sockets/main.socket.js — Fixed: reliable driver notifications
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";
@@ -21,7 +20,7 @@ const initSocketHandlers = (io) => {
     const user = await authSocket(socket);
     if (!user) { socket.disconnect(); return; }
 
-    console.log(`🔌 ${user.name} (${user.role}) connected [${socket.id}]`);
+    console.log(`${user.name} (${user.role}) connected [${socket.id}]`);
     socket.userId = String(user._id);
     socket.userRole = user.role;
 
@@ -35,7 +34,7 @@ const initSocketHandlers = (io) => {
       }
     }
 
-    // ── Join a ride room ──────────────────────────────────
+    // Join a ride room
     socket.on("joinRide", ({ rideId }) => {
       socket.join(`ride_${rideId}`);
       console.log(`  ${user.name} → ride room: ${rideId}`);
@@ -43,7 +42,7 @@ const initSocketHandlers = (io) => {
 
     socket.on("leaveRide", ({ rideId }) => socket.leave(`ride_${rideId}`));
 
-    // ── Driver goes online ────────────────────────────────
+    // Driver goes online
     socket.on("goOnline", async () => {
       if (user.role !== "DRIVER") return;
       socket.join("drivers_online");
@@ -62,9 +61,7 @@ const initSocketHandlers = (io) => {
       io.emit("driverStatusChanged", { driverId: driver?._id, isOnline: false });
     });
 
-    // ── Rider searching → broadcast to drivers_online ─────
-    // This is a SECONDARY path (backend createRide already does io.emit)
-    // Kept for real-time push without waiting for HTTP response
+    // ── Rider searching → broadcast to drivers_online 
     socket.on("riderSearching", (data) => {
       console.log(`  🚗 Rider searching: ${data.cabType} ride, ₹${data.fare}`);
       // Emit to all online drivers
@@ -74,7 +71,7 @@ const initSocketHandlers = (io) => {
       });
     });
 
-    // ── Driver GPS location update ────────────────────────
+    // ── Driver GPS location update
     socket.on("driverLocation", async ({ rideId, lat, lng }) => {
       if (user.role !== "DRIVER") return;
       // Update DB asynchronously
@@ -90,7 +87,7 @@ const initSocketHandlers = (io) => {
       }
     });
 
-    // ── Chat messages ─────────────────────────────────────
+    // Chat messages
     socket.on("sendMessage", async ({ rideId, message }) => {
       if (!message?.trim() || !rideId) return;
       try {
@@ -117,7 +114,7 @@ const initSocketHandlers = (io) => {
       }
     });
 
-    // ── Disconnect ────────────────────────────────────────
+    // Disconnect
     socket.on("disconnect", async () => {
       onlineDriverSockets.delete(socket.id);
       if (user.role === "DRIVER") {

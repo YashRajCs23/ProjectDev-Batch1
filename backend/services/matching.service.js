@@ -1,5 +1,3 @@
-// services/matching.service.js — Ride matching for shared rides
-
 const haversine = (lat1, lng1, lat2, lng2) => {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

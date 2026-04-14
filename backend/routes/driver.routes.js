@@ -1,4 +1,3 @@
-// routes/driver.routes.js
 import express from "express";
 import { registerDriver, getMyDriver, updateDriver, toggleOnline, updateLocation, getNearbyDrivers } from "../controllers/driver.controller.js";
 import { protect, requireRole } from "../middleware/auth.middleware.js";

@@ -1,4 +1,3 @@
-// services/otp.service.js
 import { OTP } from "../models/index.models.js";
 
 export const generateOTP = () =>

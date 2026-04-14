@@ -1,4 +1,3 @@
-// services/geoapify.service.js — Geoapify API wrapper (India-optimized)
 import axios from "axios";
 
 const KEY = process.env.GEOAPIFY_API_KEY || "42275beb38a64d1486b88a378b90a008";

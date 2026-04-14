@@ -1,11 +1,10 @@
-// controllers/ride.controller.js
 import Ride from "../models/Ride.model.js";
 import Driver from "../models/Driver.model.js";
 import { getRoute } from "../services/geoapify.service.js";
 import { calculateFare } from "../config/pricing.js";
 import { calcMatchScore } from "../services/matching.service.js";
 
-// ── Fare estimate ──────────────────────────────────────────
+//Fare estimate
 export const estimateFare = async (req, res) => {
   try {
     const { fromLat, fromLng, toLat, toLng, cabType, rideType } = req.query;
@@ -19,7 +18,7 @@ export const estimateFare = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Create (book) a ride ───────────────────────────────────
+//Create (book) a ride
 export const createRide = async (req, res) => {
   try {
     const { pickupAddress, pickupLat, pickupLng, dropAddress, dropLat, dropLng, cabType, rideType, tripType, genderPreference, paymentMethod } = req.body;
@@ -57,7 +56,7 @@ export const createRide = async (req, res) => {
       }],
     });
 
-    // ── Broadcast to ALL connected sockets ────────────────
+    //Broadcast to ALL connected sockets
     const payload = {
       rideId: String(ride._id),
       cabType,
@@ -70,10 +69,10 @@ export const createRide = async (req, res) => {
 
     if (req.io) {
       const count = req.io.sockets.size;
-      console.log(`\n📢 newRideAvailable → ${count} socket(s) | ${cabType} ₹${fare}`);
+      console.log(`\n newRideAvailable → ${count} socket(s) | ${cabType} ₹${fare}`);
       req.io.emit("newRideAvailable", payload);
     } else {
-      console.error("❌ req.io undefined — socket broadcast failed");
+      console.error(" req.io undefined — socket broadcast failed");
     }
 
     res.status(201).json({ success: true, ride });
@@ -83,7 +82,7 @@ export const createRide = async (req, res) => {
   }
 };
 
-// ── Driver accepts a ride ──────────────────────────────────
+// Driver accepts a ride
 export const acceptRide = async (req, res) => {
   try {
     const driver = await Driver.findOne({ userId: req.user._id });
@@ -106,7 +105,7 @@ export const acceptRide = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Update ride status ─────────────────────────────────────
+//Update ride status
 export const updateRideStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -128,7 +127,7 @@ export const updateRideStatus = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Cancel ride ────────────────────────────────────────────
+//Cancel ride
 export const cancelRide = async (req, res) => {
   try {
     const { reason } = req.body;
@@ -150,7 +149,7 @@ export const cancelRide = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Shared rides matching ──────────────────────────────────
+// Shared rides matching 
 export const getSharedRides = async (req, res) => {
   try {
     const { lat, lng, dropLat, dropLng, cabType, genderPref } = req.query;
@@ -169,7 +168,7 @@ export const getSharedRides = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Join shared ride ───────────────────────────────────────
+// Join shared ride
 export const joinSharedRide = async (req, res) => {
   try {
     const { pickupAddress, pickupLat, pickupLng, dropAddress, dropLat, dropLng } = req.body;
@@ -221,7 +220,7 @@ export const geocodeProxy = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ── Generate start OTP (when driver arrives) ──────────────
+//Generate start OTP (when driver arrives)
 export const generateStartOtp = async (req, res) => {
   try {
     const driver = await Driver.findOne({ userId: req.user._id });

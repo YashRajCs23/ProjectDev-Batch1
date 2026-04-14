@@ -1,5 +1,3 @@
-// seed.js — Run: node seed.js
-// Works with both local MongoDB AND MongoDB Atlas
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
@@ -71,8 +69,8 @@ const seed = async () => {
     },
   ]);
 
-  console.log("✅ Seed complete!\n");
-  console.log("📧 Credentials:");
+  console.log("Seed complete!\n");
+  console.log("Credentials:");
   console.log("  Admin:  admin@ridebook.com  / admin123");
   console.log("  Rider1: priya@example.com   / rider123  (Female)");
   console.log("  Rider2: rahul@example.com   / rider123  (Male)");

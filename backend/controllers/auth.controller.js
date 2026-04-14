@@ -1,4 +1,3 @@
-// controllers/auth.controller.js
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";

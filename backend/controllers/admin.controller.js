@@ -1,4 +1,3 @@
-// controllers/admin.controller.js
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";
 import Ride from "../models/Ride.model.js";
@@ -91,8 +90,7 @@ export const getAllRides = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ─────────────────────────────────────────────────────────────
-// controllers/rating.controller.js logic bundled here
+// Rating.controller.js logic
 import { Rating as RatingModel } from "../models/index.models.js";
 
 export const submitRating = async (req, res) => {
@@ -120,7 +118,6 @@ export const submitRating = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ─────────────────────────────────────────────────────────────
 // Complaint
 import { Complaint as ComplaintModel } from "../models/index.models.js";
 
@@ -134,7 +131,6 @@ export const fileComplaint = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ─────────────────────────────────────────────────────────────
 // Emergency
 import { Emergency as EmergencyModel } from "../models/index.models.js";
 
@@ -162,7 +158,6 @@ export const resolveAlert = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ─────────────────────────────────────────────────────────────
 // Chat
 import { Message as MessageModel } from "../models/index.models.js";
 import Ride2 from "../models/Ride.model.js";

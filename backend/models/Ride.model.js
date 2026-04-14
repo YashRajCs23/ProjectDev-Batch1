@@ -1,4 +1,3 @@
-// models/Ride.model.js
 import mongoose from "mongoose";
 
 const CoordSchema = new mongoose.Schema({ lat: Number, lng: Number }, { _id: false });
@@ -7,12 +6,12 @@ const RideSchema = new mongoose.Schema(
   {
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "Driver" },
 
-    // ── Ride type ─────────────────────────────────────────
+    // Ride type 
     rideType:  { type: String, enum: ["PRIVATE", "SHARED"], required: true },
     cabType:   { type: String, enum: ["MINI", "SEDAN", "SUV", "PREMIUM"], required: true },
     tripType:  { type: String, enum: ["INTRACITY", "INTERCITY"], default: "INTRACITY" },
 
-    // ── Route ─────────────────────────────────────────────
+    //Route
     pickup: {
       address: { type: String, required: true },
       coordinates: CoordSchema,
@@ -25,11 +24,11 @@ const RideSchema = new mongoose.Schema(
     distanceKm: { type: Number, default: 0 },
     durationMin: { type: Number, default: 0 },
 
-    // ── Fare ──────────────────────────────────────────────
+    //Fare
     fareEstimate: { type: Number, default: 0 },   // INR
     surgeMultiplier: { type: Number, default: 1.0 },
 
-    // ── Passengers (shared rides can have multiple) ───────
+    //Passengers (shared rides can have multiple)
     riders: [
       {
         riderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -42,28 +41,28 @@ const RideSchema = new mongoose.Schema(
     ],
     maxRiders: { type: Number, default: 1 }, // 1=private, 3=shared
 
-    // ── Gender preference ─────────────────────────────────
+    //Gender preference 
     genderPreference: {
       type: String,
       enum: ["MALE_ONLY", "FEMALE_ONLY", "ANY"],
       default: "ANY",
     },
 
-    // ── Status ───────────────────────────────────────────
+    // Status
     status: {
       type: String,
       enum: ["SEARCHING", "ACCEPTED", "ARRIVING", "ONGOING", "COMPLETED", "CANCELLED"],
       default: "SEARCHING",
     },
 
-    // ── Scheduled departure ───────────────────────────────
+    //Scheduled departure
     departureTime: { type: Date, default: Date.now },
 
-    // ── Payment ───────────────────────────────────────────
+    //Payment 
     paymentMethod: { type: String, enum: ["RAZORPAY", "CASH"], default: "CASH" },
     isPaid: { type: Boolean, default: false },
 
-    // ── Cancellation ─────────────────────────────────────
+    //Cancellation
     cancelledBy: { type: String, enum: ["RIDER", "DRIVER", "ADMIN"], default: null },
     cancelReason: { type: String, default: "" },
     cancellationFee: { type: Number, default: 0 },
