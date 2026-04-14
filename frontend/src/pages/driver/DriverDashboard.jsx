@@ -161,7 +161,20 @@ export default function DriverDashboard() {
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 5000); };
 
   const loadCurrentRide = async id => {
-    try { const { data } = await api.get(`/rides/${id}`); setCurrentRide(data.ride); } catch {}
+    try {
+      const { data } = await api.get(`/rides/${id}`);
+      const r = data.ride;
+      // Only show ride if it's actually active
+      if (r && ["ACCEPTED","ARRIVING","ONGOING"].includes(r.status)) {
+        setCurrentRide(r);
+      } else {
+        setCurrentRide(null);
+        // Clear from driver DB too
+        if (r?.status === "CANCELLED" || r?.status === "COMPLETED") {
+          api.post("/drivers/toggle-online").catch(() => {}).then(() => loadDriver());
+        }
+      }
+    } catch {}
   };
 
   const toggleOnline = async () => {
@@ -280,7 +293,7 @@ export default function DriverDashboard() {
             </div>
 
             {/* Active ride */}
-            {currentRide && (
+            {currentRide && ["ACCEPTED","ARRIVING","ONGOING"].includes(currentRide.status) && (
               <div style={{ background: "var(--surface2)", borderRadius: "var(--r)", padding: 16, marginBottom: 16, border: "1px solid rgba(245,197,24,0.25)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: "var(--accent)" }}>Active Ride</div>

@@ -260,6 +260,9 @@ export default function RiderDashboard() {
 
   const bookRide = async (joinId = null) => {
     if (!pickup || !drop) return setErr("Select both locations.");
+    // Validate pickup != drop
+    const dist = Math.abs(pickup.lat - drop.lat) + Math.abs(pickup.lng - drop.lng);
+    if (dist < 0.0005) return setErr("Pickup and drop location cannot be the same place.");
     setBooking(true); setErr("");
     try {
       let rideId;
