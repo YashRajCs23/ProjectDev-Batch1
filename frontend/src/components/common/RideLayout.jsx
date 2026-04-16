@@ -45,7 +45,7 @@ export default function RideLayout({ children }) {
           </button>
         </div>
       </header>
-      <div style={{ flex: 1, overflow: "hidden" }}>{children}</div>
+      <div style={{ flex: 1, overflow: "auto" }}>{children}</div>
     </div>
   );
 }

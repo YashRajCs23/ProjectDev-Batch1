@@ -1,3 +1,4 @@
+// controllers/auth.controller.js
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";
@@ -14,13 +15,14 @@ const safeUser = (u) => ({
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, gender, role, phone } = req.body;
+    const { name, email, password, gender, role, phone, trustedContacts } = req.body;
     if (!name || !email || !password || !gender)
       return res.status(400).json({ success: false, message: "All fields required." });
     if (await User.findOne({ email }))
       return res.status(409).json({ success: false, message: "Email already registered." });
 
-    const user = await User.create({ name, email, password, gender, role: role || "RIDER", phone });
+    const user = await User.create({
+      trustedContacts: trustedContacts || [], name, email, password, gender, role: role || "RIDER", phone });
     res.status(201).json({ success: true, token: sign(user._id), user: safeUser(user) });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };

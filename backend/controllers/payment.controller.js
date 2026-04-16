@@ -1,3 +1,4 @@
+// controllers/payment.controller.js
 import crypto from "crypto";
 import { Payment } from "../models/index.models.js";
 import Ride from "../models/Ride.model.js";

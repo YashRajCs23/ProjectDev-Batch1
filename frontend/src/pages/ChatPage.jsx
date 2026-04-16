@@ -1,10 +1,11 @@
-// src/pages/ChatPage.jsx — Fixed real-time + enhanced UI
+// src/pages/ChatPage.jsx — Fixed real-time: stable listeners, no duplicate messages
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import RideLayout from "../components/common/RideLayout";
+import CallOverlay from "../components/common/CallOverlay";
 
 export default function ChatPage() {
   const { rideId } = useParams();
@@ -13,124 +14,137 @@ export default function ChatPage() {
   const nav = useNavigate();
 
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [ride, setRide] = useState(null);
+  const [input, setInput]       = useState("");
+  const [ride, setRide]         = useState(null);
   const [connected, setConnected] = useState(false);
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
-  // Use ref for messages to avoid stale closure in socket handler
-  const msgsRef = useRef([]);
-  msgsRef.current = messages;
 
+  const bottomRef  = useRef(null);
+  const inputRef   = useRef(null);
+  const seenIds    = useRef(new Set()); // Track message IDs to prevent duplicates
+
+  // ── Load history once ───────────────────────────────────
   useEffect(() => {
-    // Load history
     api.get(`/chat/${rideId}`).then(({ data }) => {
-      setMessages(data.messages || []);
+      const msgs = data.messages || [];
+      msgs.forEach(m => seenIds.current.add(String(m._id)));
+      setMessages(msgs);
     });
-    api.get(`/rides/${rideId}`).then(({ data }) => setRide(data.ride));
+    api.get(`/rides/${rideId}`).then(({ data }) => setRide(data.ride)).catch(() => {});
   }, [rideId]);
 
-  // Socket setup — separate from history load
+  // ── Socket: join room + listen for messages ─────────────
   useEffect(() => {
     if (!socket) return;
 
-    const handleMsg = (msg) => {
-      setMessages(prev => {
-        // Avoid duplicate messages
-        if (prev.find(m => String(m._id) === String(msg._id))) return prev;
-        return [...prev, msg];
-      });
-    };
-
-    const handleConnect = () => setConnected(true);
-    const handleDisconnect = () => setConnected(false);
-
-    socket.on("receiveMessage", handleMsg);
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
     setConnected(socket.connected);
-
-    // Join ride room
     socket.emit("joinRide", { rideId });
 
+    const onMsg = (msg) => {
+      const id = String(msg._id);
+      if (seenIds.current.has(id)) return; // ignore duplicate
+      seenIds.current.add(id);
+      setMessages(prev => [...prev, msg]);
+    };
+
+    const onConnect    = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+
+    // Remove any old listeners before adding new ones
+    socket.off("receiveMessage");
+    socket.on("receiveMessage", onMsg);
+    socket.on("connect",    onConnect);
+    socket.on("disconnect", onDisconnect);
+
     return () => {
-      socket.off("receiveMessage", handleMsg);
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
+      socket.off("receiveMessage", onMsg);
+      socket.off("connect",    onConnect);
+      socket.off("disconnect", onDisconnect);
     };
   }, [socket, rideId]);
 
-  // Scroll to bottom on new message
+  // ── Auto-scroll ─────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const send = () => {
     const msg = input.trim();
-    if (!msg || !socket) return;
+    if (!msg) return;
+    if (!socket?.connected) { alert("Not connected. Please wait a moment."); return; }
     socket.emit("sendMessage", { rideId, message: msg });
     setInput("");
     inputRef.current?.focus();
   };
 
   const fmtTime = d => new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const myId    = String(user?._id || user?.id || "");
 
   return (
     <RideLayout>
-      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)" }}>
+      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden" }}>
 
         {/* Header */}
-        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <button onClick={() => nav(-1)} style={{ background: "none", border: "none", color: "var(--text2)", cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "12px 18px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <button onClick={() => nav(-1)} style={{ background: "none", border: "none", color: "var(--text2)", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>←</button>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>💬 Ride Chat</div>
-            <div style={{ fontSize: 12, color: "var(--text3)" }}>{ride?.pickup?.address?.substring(0, 25)}... → {ride?.drop?.address?.substring(0, 25)}...</div>
+            <div style={{ fontSize: 11, color: "var(--text3)" }}>
+              {ride?.pickup?.address?.split(",")[0]} → {ride?.drop?.address?.split(",")[0]}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: connected ? "var(--green)" : "var(--red)" }} />
-            <span style={{ color: connected ? "var(--green)" : "var(--red)" }}>{connected ? "Live" : "Connecting..."}</span>
+          {/* Call button in chat header */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {ride && <CallOverlay rideId={rideId} myRole={user?.role === "DRIVER" ? "DRIVER" : "RIDER"} />}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: connected ? "var(--green)" : "var(--red)" }} />
+              <span style={{ fontSize: 11, color: connected ? "var(--green)" : "var(--red)" }}>
+                {connected ? "Live" : "Offline"}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 3 }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
           {messages.length === 0 && (
             <div style={{ textAlign: "center", color: "var(--text3)", margin: "auto" }}>
               <div style={{ fontSize: 40, marginBottom: 8 }}>👋</div>
-              <div>Say hello to your {ride?.rideType === "SHARED" ? "group" : "driver"}!</div>
+              <div style={{ fontSize: 14 }}>Start the conversation!</div>
             </div>
           )}
 
           {messages.map((msg, idx) => {
-            const isMe = String(msg.senderId?._id) === String(user?.id);
+            const senderId = String(msg.senderId?._id || msg.senderId);
+            const isMe     = senderId === myId;
             const isSystem = msg.messageType === "SYSTEM";
-            const prev = messages[idx - 1];
-            const showName = !isMe && !isSystem && String(prev?.senderId?._id) !== String(msg.senderId?._id);
+            const prev     = messages[idx - 1];
+            const showName = !isMe && !isSystem && String(prev?.senderId?._id || prev?.senderId) !== senderId;
 
             if (isSystem) return (
-              <div key={msg._id || idx} style={{ textAlign: "center", fontSize: 11, color: "var(--text3)", padding: "6px 0" }}>{msg.message}</div>
+              <div key={msg._id || idx} style={{ textAlign: "center", fontSize: 11, color: "var(--text3)", padding: "5px 0" }}>
+                {msg.message}
+              </div>
             );
 
             return (
               <div key={msg._id || idx} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: 1 }}>
                 {showName && (
-                  <span style={{ fontSize: 10, color: "var(--text3)", marginBottom: 3, marginLeft: 4 }}>
+                  <span style={{ fontSize: 10, color: "var(--text3)", marginBottom: 2, marginLeft: 4 }}>
                     {msg.senderId?.name} · {msg.senderRole}
                   </span>
                 )}
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexDirection: isMe ? "row-reverse" : "row" }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 5, flexDirection: isMe ? "row-reverse" : "row" }}>
                   <div style={{
-                    maxWidth: 280, padding: "10px 14px",
-                    borderRadius: isMe ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
+                    maxWidth: 300, padding: "9px 13px",
+                    borderRadius: isMe ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
                     background: isMe ? "var(--accent)" : "var(--surface2)",
                     color: isMe ? "#000" : "var(--text)",
-                    fontSize: 14, lineHeight: 1.5,
+                    fontSize: 14, lineHeight: 1.5, wordBreak: "break-word",
                     border: isMe ? "none" : "1px solid var(--border)",
-                    wordBreak: "break-word",
                   }}>
                     {msg.message}
                   </div>
-                  <span style={{ fontSize: 10, color: "var(--text3)", whiteSpace: "nowrap", marginBottom: 2 }}>
+                  <span style={{ fontSize: 10, color: "var(--text3)", marginBottom: 2, whiteSpace: "nowrap" }}>
                     {fmtTime(msg.createdAt)}
                   </span>
                 </div>
@@ -141,16 +155,15 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
-          <textarea ref={inputRef} value={input}
+        <div style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", padding: "11px 14px", display: "flex", gap: 10, flexShrink: 0 }}>
+          <input ref={inputRef} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder="Type a message... (Enter to send)"
-            rows={1}
-            style={{ flex: 1, padding: "11px 14px", borderRadius: 14, resize: "none", maxHeight: 80, overflowY: "auto", fontSize: 14 }}
+            style={{ flex: 1, padding: "10px 14px", borderRadius: 12, fontSize: 14, border: "1px solid var(--border)", background: "var(--bg2)", color: "var(--text)" }}
           />
           <button onClick={send} disabled={!input.trim()}
-            style={{ width: 44, height: 44, borderRadius: 14, background: input.trim() ? "var(--accent)" : "var(--surface2)", border: "none", color: input.trim() ? "#000" : "var(--text3)", fontSize: 20, cursor: input.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            style={{ width: 44, height: 44, borderRadius: 12, background: input.trim() ? "var(--accent)" : "var(--surface2)", border: "none", color: input.trim() ? "#000" : "var(--text3)", fontSize: 20, cursor: input.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center" }}>
             ➤
           </button>
         </div>

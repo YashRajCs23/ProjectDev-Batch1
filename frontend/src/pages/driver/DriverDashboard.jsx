@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import api from "../../utils/api";
 import RideLayout from "../../components/common/RideLayout";
+import CallOverlay from "../../components/common/CallOverlay";
 
 const KEY = "42275beb38a64d1486b88a378b90a008";
 
@@ -310,6 +311,7 @@ export default function DriverDashboard() {
                   {currentRide.status === "ARRIVING"  && <Chip c="var(--green)" fn={generateOtp}>🔐 Get OTP</Chip>}
                   {currentRide.status === "ONGOING"   && <Chip c="var(--green)" fn={() => updateStatus("COMPLETED")}>🏁 Complete</Chip>}
                   <Chip c="var(--accent)" fn={() => nav(`/chat/${currentRide._id}`)}>💬 Chat</Chip>
+                  {currentRide && <CallOverlay rideId={String(currentRide._id)} myRole="DRIVER" />}
                   <Chip c="var(--red)"    fn={() => updateStatus("CANCELLED")}>✕</Chip>
                 </div>
                 {/* OTP Verification Panel — shown after driver clicks Get OTP */}

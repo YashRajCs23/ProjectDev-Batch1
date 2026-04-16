@@ -207,16 +207,26 @@ export default function RideTrackingPage() {
       }
 
       const rzp = new window.Razorpay({
-        key: data.keyId, amount: data.amount, currency: "INR",
-        name: "RideBook", description: `₹${ride?.fareEstimate} ride`,
+        key: data.keyId,
+        amount: data.amount,
+        currency: "INR",
+        name: "RideBook",
+        description: `₹${ride?.fareEstimate} ride`,
         order_id: data.orderId,
+        // Enable all payment methods including UPI, Cards, Net Banking, Wallets
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
         handler: async (resp) => {
           await api.post("/payment/verify", { ...resp, rideId: id });
           setRide(r => ({ ...r, isPaid: true }));
           setShowPayment(false);
           alert("✅ Payment successful!");
         },
-        prefill: { name: user?.name, email: user?.email || "" },
+        prefill: { name: user?.name, email: user?.email || "", contact: user?.phone || "" },
         theme: { color: "#f5c518" },
         modal: { ondismiss: () => setPaying(false) },
       });
