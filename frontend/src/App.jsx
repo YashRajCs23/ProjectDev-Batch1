@@ -14,6 +14,9 @@ import RideTrackingPage from "./pages/rider/RideTrackingPage";
 import DriverDashboard from "./pages/driver/DriverDashboard";
 import DriverSetupPage from "./pages/driver/DriverSetupPage";
 import DriverRidesPage from "./pages/driver/DriverRidesPage";
+import CreatePoolPage from "./pages/driver/CreatePoolPage";
+import JoinRequestsPage from "./pages/driver/JoinRequestsPage";
+import SearchPoolsPage from "./pages/rider/SearchPoolsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -64,6 +67,9 @@ export default function App() {
             {/* Driver */}
             <Route path="/driver" element={<Guard role="DRIVER"><DriverDashboard /></Guard>} />
             <Route path="/driver/setup" element={<Guard><DriverSetupPage /></Guard>} />
+            <Route path="/driver/create-pool" element={<Guard role="DRIVER"><CreatePoolPage /></Guard>} />
+            <Route path="/driver/pool/:rideId/requests" element={<Guard role="DRIVER"><JoinRequestsPage /></Guard>} />
+            <Route path="/ride/search-pools" element={<Guard role="RIDER"><SearchPoolsPage /></Guard>} />
             <Route path="/driver/rides" element={<Guard role="DRIVER"><DriverRidesPage /></Guard>} />
 
             {/* Admin */}

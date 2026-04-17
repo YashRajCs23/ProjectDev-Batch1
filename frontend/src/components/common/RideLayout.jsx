@@ -10,11 +10,13 @@ export default function RideLayout({ children }) {
   const riderLinks = [
     { to: "/ride", label: "🏠 Home" },
     { to: "/ride/my-rides", label: "🗂 My Rides" },
+    { to: "/ride/search-pools", label: "🔍 Find Pool" },
     { to: "/profile", label: "👤 Profile" },
   ];
   const driverLinks = [
     { to: "/driver", label: "🏠 Dashboard" },
     { to: "/driver/rides", label: "🗂 Ride History" },
+    { to: "/driver/create-pool", label: "🚗 Create Pool" },
     { to: "/driver/setup", label: "⚙️ Settings" },
     { to: "/profile", label: "👤 Profile" },
   ];
